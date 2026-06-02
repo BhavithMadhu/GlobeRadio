@@ -387,6 +387,5 @@ Please open an issue before submitting a large pull request so we can discuss th
 
 <div align="center">
 
-Made with ❤️ by [BhavithMadhu](https://github.com/BhavithMadhu)
 
 </div>
