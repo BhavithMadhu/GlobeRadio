@@ -1,0 +1,68 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id                String             @id @default(uuid())
+  email             String             @unique
+  passwordHash      String
+  name              String
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  
+  // Relations
+  favorites         FavoriteStation[]
+  recents           RecentlyPlayed[]
+  twoFactorSettings TwoFactorSettings?
+}
+
+model FavoriteStation {
+  id         String   @id @default(uuid())
+  userId     String
+  stationId  String
+  name       String
+  url        String
+  favicon    String?
+  tags       String?
+  country    String?
+  frequency  String?
+  bitrate    String?
+  createdAt  DateTime @default(now())
+
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@unique([userId, stationId])
+}
+
+model RecentlyPlayed {
+  id         String   @id @default(uuid())
+  userId     String
+  stationId  String
+  name       String
+  url        String
+  favicon    String?
+  country    String?
+  playedAt   DateTime @default(now())
+
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model TwoFactorSettings {
+  id             String   @id @default(uuid())
+  userId         String   @unique
+  secret         String
+  enabled        Boolean  @default(false)
+  recoveryCodes  String   // Comma-separated or JSON string of recovery codes
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}

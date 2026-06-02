@@ -1,0 +1,6 @@
+{
+  "name": "GlobeRadio",
+  "description": "Interactive global radio explorer featuring a 3D Earth projection, custom station streams, secure user sessions via PBKDF2 cryptography, and TOTP Two-Factor Authentication.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
