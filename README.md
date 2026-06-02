@@ -1,1 +1,1 @@
-# Document everything here neatly - Jayesh <font color="red">(may erase this!!)</font> 
+# Document everything here neatly - Jayesh ![note](https://img.shields.io/badge/may%20erase%20this!!-red)
