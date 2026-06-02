@@ -122,9 +122,20 @@ app.post('/api/auth/login', async (req: any, res: any) => {
       include: { twoFactorSettings: true }
     });
 
-    if (!user || !verifyPassword(password, user.passwordHash)) {
-      return res.status(401).json({ error: 'Incorrect email or password.' });
-    }
+    console.log("Login attempt:", email);
+
+  if (!user) {
+    console.log("User not found");
+    return res.status(401).json({ error: 'Incorrect email or password.' });
+  }
+
+  const passwordValid = verifyPassword(password, user.passwordHash);
+
+  console.log("Password valid:", passwordValid);
+
+  if (!passwordValid) {
+    return res.status(401).json({ error: 'Incorrect email or password.' });
+  }
 
     const is2faActive = user.twoFactorSettings?.enabled || false;
     const sessionToken = crypto.randomUUID();
