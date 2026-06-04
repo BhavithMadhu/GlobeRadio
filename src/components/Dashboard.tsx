@@ -35,6 +35,11 @@ export default function Dashboard({
   const [favorites, setFavorites] = useState<FavoriteStation[]>([]);
   const [recents, setRecents] = useState<RecentlyPlayed[]>([]);
   
+  const [analytics, setAnalytics] = useState({
+  totalHours: 0,
+  totalSessions: 0,
+  totalSeconds: 0,
+  });
   // 2FA Security states
   const [twoFactorEnabled, setTwoFactorEnabled] = useState(user.twoFactorEnabled);
   const [isSettingUp2fa, setIsSettingUp2fa] = useState(false);
@@ -59,6 +64,14 @@ export default function Dashboard({
         const recData = await recRes.json();
         setRecents(recData);
       }
+      const analyticsRes = await fetch('/api/analytics/summary', {
+        credentials: 'include',
+    });
+
+    if (analyticsRes.ok) {
+      const analyticsData = await analyticsRes.json();
+      setAnalytics(analyticsData);
+    }
     } catch (err) {
       console.error('Failed to load user info:', err);
     }
@@ -213,7 +226,9 @@ export default function Dashboard({
             Active Listen Time
           </p>
           <p className="font-extrabold text-3xl md:text-4xl text-indigo-300 mt-2 leading-none">
-            1,428h
+            {analytics.totalHours >= 1
+            ? `${analytics.totalHours}h`
+            : `${analytics.totalMinutes || 0}m`}
           </p>
         </div>
       </section>
