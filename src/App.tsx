@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect,useRef} from 'react';
 import { 
   Radio, 
   MapPin, 
@@ -40,7 +40,7 @@ export default function App() {
   const [stations, setStations] = useState<RadioStation[]>([]);
   const [loadingStations, setLoadingStations] = useState(false);
   const [currentStation, setCurrentStation] = useState<RadioStation | null>(null);
-  
+  const analyticsSessionRef = useRef<string | null>(null);
   // List of station favors (savedUUIDs)
   const [favoriteUUIDs, setFavoriteUUIDs] = useState<string[]>([]);
 
@@ -167,26 +167,64 @@ export default function App() {
   };
 
   // Plays a station and registers into played history logs
-  const handlePlayStation = async (station: any) => {
-    setCurrentStation(station);
-    if (user) {
-      try {
-        await fetch('/api/stations/recents', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            stationId: station.stationuuid,
-            name: station.name,
-            url: station.url,
-            favicon: station.favicon,
-            country: station.country
-          })
-        });
-      } catch (err) {
-        console.warn('Failed to track historical stream play:', err);
-      }
+const handlePlayStation = async (station: any) => {
+  setCurrentStation(station);
+
+  if (!user) return;
+
+  try {
+    // End previous listening session
+    if (analyticsSessionRef.current) {
+      await fetch('/api/analytics/end', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          sessionId: analyticsSessionRef.current,
+        }),
+      });
+
+      analyticsSessionRef.current = null;
     }
-  };
+
+    // Record recent station
+    await fetch('/api/stations/recents', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        stationId: station.stationuuid,
+        name: station.name,
+        url: station.url,
+        favicon: station.favicon,
+        country: station.country,
+      }),
+    });
+
+    // Start new listening session
+    const analyticsResponse = await fetch('/api/analytics/start', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      credentials: 'include',
+      body: JSON.stringify({
+        stationId: station.stationuuid,
+        stationName: station.name,
+      }),
+    });
+
+    if (analyticsResponse.ok) {
+      const session = await analyticsResponse.json();
+      analyticsSessionRef.current = session.id;
+    }
+  } catch (err) {
+    console.warn('Failed to track listening analytics:', err);
+  }
+};
 
   const handleNextStation = () => {
     if (stations.length === 0 || !currentStation) return;
@@ -202,17 +240,40 @@ export default function App() {
     handlePlayStation(stations[prevIndex]);
   };
 
-  const handleLogout = async () => {
-    try {
-      await fetch('/api/auth/logout', { method: 'POST' });
-      setUser(null);
-      setFavoriteUUIDs([]);
-      setActiveView('home');
-    } catch (err) {
-      console.error('Logout error:', err);
-    }
-  };
+ const handleLogout = async () => {
+  try {
+    // End active listening session before logout
+    if (analyticsSessionRef.current) {
+      try {
+        await fetch('/api/analytics/end', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          credentials: 'include',
+          body: JSON.stringify({
+            sessionId: analyticsSessionRef.current,
+          }),
+        });
 
+        analyticsSessionRef.current = null;
+      } catch (err) {
+        console.warn('Failed to end listening session on logout:', err);
+      }
+    }
+
+    await fetch('/api/auth/logout', {
+      method: 'POST',
+      credentials: 'include',
+    });
+
+    setUser(null);
+    setFavoriteUUIDs([]);
+    setActiveView('home');
+  } catch (err) {
+    console.error('Logout error:', err);
+  }
+};
   return (
     <div className="min-h-screen bg-neutral-950 text-neutral-100 flex flex-col font-sans select-none overflow-x-hidden pb-32">
       
