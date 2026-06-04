@@ -546,6 +546,100 @@ app.get('/api/stations/search', async (req: any, res: any) => {
   }
 });
 
+// Analytics - Start Listening Session
+app.post('/api/analytics/start', async (req: any, res: any) => {
+  if (!req.user) {
+    return res.status(401).json({ error: 'Unauthorized.' });
+  }
+
+  try {
+    const { stationId, stationName } = req.body;
+
+    const session = await prisma.listeningSession.create({
+      data: {
+        userId: req.user.id,
+        stationId,
+        stationName,
+      },
+    });
+
+    return res.json(session);
+  } catch (error) {
+    console.error('Start session error:', error);
+    return res.status(500).json({ error: 'Failed to start session' });
+  }
+});
+
+// Analytics - End Listening Session
+app.post('/api/analytics/end', async (req: any, res: any) => {
+  if (!req.user) {
+    return res.status(401).json({ error: 'Unauthorized.' });
+  }
+
+  try {
+    const { sessionId } = req.body;
+
+    const session = await prisma.listeningSession.findUnique({
+      where: { id: sessionId },
+    });
+
+    if (!session) {
+      return res.status(404).json({ error: 'Session not found' });
+    }
+
+    const endedAt = new Date();
+
+    const durationSec = Math.floor(
+      (endedAt.getTime() - session.startedAt.getTime()) / 1000
+    );
+
+    const updated = await prisma.listeningSession.update({
+      where: { id: sessionId },
+      data: {
+        endedAt,
+        durationSec,
+      },
+    });
+
+    return res.json(updated);
+  } catch (error) {
+    console.error('End session error:', error);
+    return res.status(500).json({ error: 'Failed to end session' });
+  }
+});
+
+app.get('/api/analytics/summary', async (req: any, res: any) => {
+  if (!req.user) {
+    return res.status(401).json({ error: 'Unauthorized.' });
+  }
+
+  try {
+    const sessions = await prisma.listeningSession.findMany({
+      where: {
+        userId: req.user.id,
+      },
+    });
+
+    const totalSeconds = sessions.reduce(
+      (sum, session) => sum + session.durationSec,
+      0
+    );
+
+    const totalHours = Number((totalSeconds / 3600).toFixed(1));
+    const totalMinutes = Math.floor(totalSeconds / 60);
+    
+    res.json({
+    totalHours,
+    totalMinutes,
+    totalSessions: sessions.length,
+    totalSeconds,
+  });
+  } catch (error) {
+    console.error('Analytics summary error:', error);
+    res.status(500).json({ error: 'Failed to load analytics summary' });
+  }
+});
+
 // Favorites CRUD
 app.get('/api/stations/favorites', async (req: any, res: any) => {
   if (!req.user) return res.status(401).json({ error: 'Unauthorized.' });
