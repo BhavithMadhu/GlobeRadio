@@ -35,63 +35,16 @@ export default function Player({
   const [copied, setCopied] = useState(false);
   const [errorLoading, setErrorLoading] = useState(false);
   
-  const sessionIdRef = useRef<string | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   // Sync station URL to HTML5 Audio Tag
 useEffect(() => {
   if (!currentStation) return;
 
-  const endPreviousSession = async () => {
-    if (sessionIdRef.current) {
-      try {
-        await fetch('/api/analytics/end', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          credentials: 'include',
-          body: JSON.stringify({
-            sessionId: sessionIdRef.current,
-          }),
-        });
-      } catch (err) {
-        console.error('Failed to end listening session:', err);
-      }
-
-      sessionIdRef.current = null;
-    }
-  };
-
-  const startNewSession = async () => {
-    try {
-      const response = await fetch('/api/analytics/start', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
-        body: JSON.stringify({
-          stationId:
-            currentStation.stationuuid ||
-            currentStation.changeuuid,
-          stationName: currentStation.name,
-        }),
-      });
-
-      if (response.ok) {
-        const session = await response.json();
-        sessionIdRef.current = session.id;
-      }
-    } catch (err) {
-      console.error('Failed to start listening session:', err);
-    }
-  };
+  
 
   setIsPlaying(false);
   setErrorLoading(false);
 
-  // endPreviousSession();
-  // startNewSession();
 
   if (audioRef.current) {
     audioRef.current.pause();
@@ -119,22 +72,6 @@ useEffect(() => {
   }
 }, [currentStation]);
 
-useEffect(() => {
-  return () => {
-    if (sessionIdRef.current) {
-      fetch('/api/analytics/end', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
-        body: JSON.stringify({
-          sessionId: sessionIdRef.current,
-        }),
-      }).catch(() => {});
-    }
-  };
-}, []);
 
   // Handle Play/Pause
   const handlePlayToggle = () => {
